@@ -1,0 +1,2 @@
+# InnovateNow Outdoor Tracker
+The InnovateNow Outdoor Tracker is designed for not only registrating the GPS coordinates via different networks but also measures temperature, humidity and barometric pressure. This makes this tracker ideal for use cases where location and temperature, humidity and barometric pressure is important during travel.
