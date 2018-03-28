@@ -24,7 +24,7 @@ InnovateNow Outdoor Tracker configuration settings
 import inlogging as logging
 
 # Log level
-LOG_LEVEL = logging.INFO
+LOG_LEVEL = logging.DEBUG
 
 # Customer
 CUSTOMER = "InnovateNow"
@@ -36,23 +36,22 @@ DEVICE_ID = "e3974fe0-18d9-11e8-9cfb-da0741d48d81"
 # True for development set this parameter to False for production
 SERIAL_ACCESS = True
 
-# Reset device after the specified seconds
-DEVICE_RESET_AFTER_SECONDS = 7200
-
 # FTP Access
 # True for development set this parameter to False for production
-FTP_ACCESS = True
+FTP_ACCESS_ENABLED = True
 FTP_USER = "InnovateNow"
 FTP_PASSWORD = "123IN4567890"
 
+# Deepsleep
+DEEPSLEEP_ENABLED = True
+DEEPSLEEP_AWAKE_ON_ACCELEROMETER = True
+DEEPSLEEP_IN_SECONDS = 300   # 5 minutes
+
 # WLAN settings
+WLAN_ENABLED = False
 WLAN_SSID = "HARTOG_GUEST" # SSID to connect to
 WLAN_KEY = "1234567890"    # SSID key
 WLAN_INT_ANTENNA = True    # True internal antenna else False
-
-# BLE scan time in seconds before sending the results to AWS
-# 240
-SCAN_TIME_IN_SECONDS = 240
 
 # Sensor I2C ENVIRONMENT_I2C_BUS
 SENSOR_I2C_BUS = 0
@@ -63,20 +62,11 @@ SENSOR_I2C_SCL_PIN = 'P21'
 ENVIRONMENT_SENSOR_AVAILABLE = True
 ENVIRONMENT_SENSOR_ID = '4c871008-18da-11e8-a5ea-96c32e02788c'
 
-# GPS is an optional sensor
-# When this setting is set to False you can add a fixed latitude/longitude
-GPS_AVAILABLE = True
+# GPS 
 GPS_SENSOR_ID = '837ae7a6-18da-11e8-a5ea-96c32e02788c'
-GPS_PORT = 'I2C'   # I2C or UART
+GPS_PORT = 'I2C'   # I2C or UART (Specifiy the TX,RX pin)
 GPS_UART_TX_PIN = 'P3'
 GPS_UART_RX_PIN = 'P4'
-GPS_FIXED_LATITUDE = None
-GPS_FIXED_LONGITUDE = None
-
-# Distance greater than last coords in NVRAM use the stored values
-# Device should be static this rule will help to stabilize the coordinates
-# when gps is activated on board
-GPS_COORD_DIFF_UPDATE_RULE = 25 # meters
 
 # NTP for setting the correct time
 NTP_POOL_SERVER = "nl.pool.ntp.org"

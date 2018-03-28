@@ -16,38 +16,11 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-# Linter
-# pylint: disable=E0401,E1101,C0103
+# OTAA
+LORA_APP_EUI = None
+LORA_APP_KEY = None
 
-"""
-InnovateNow Outdoor Tracker Boot logic
-"""
-
-import os
-import machine
-import pycom
-
-from network import Server
-from config import SERIAL_ACCESS
-from config import FTP_ACCESS_ENABLED
-from config import FTP_USER
-from config import FTP_PASSWORD
-
-# Deactivate heartbeat
-pycom.heartbeat(False)
-
-# Activate Serial Access
-if SERIAL_ACCESS:
-    uart = machine.UART(0, 115200)
-    os.dupterm(uart)
-
-# Disable FTP server
-server = Server()
-server.deinit()
-
-# Enable the server again with new settings
-if FTP_ACCESS_ENABLED:
-    server.init(login=(FTP_USER, FTP_PASSWORD), timeout=600)
-
-# Wifi on boot default off
-pycom.wifi_on_boot(False)
+# ABP
+LORA_DEV_ADDR = None
+LORA_NWK_SWKEY = None
+LORA_APP_SWKEY = None

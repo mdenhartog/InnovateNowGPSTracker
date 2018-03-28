@@ -15,9 +15,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
-# Linter
+#
 # pylint: disable=E0401,C0103
+#
 
 """
 InnovateNow AWS library
@@ -26,7 +26,7 @@ import json
 import sys
 import socket
 
-import aws_config as awsconfig
+import aws_config as config
 from MQTTLib import AWSIoTMQTTClient
 
 # Initialize logging
@@ -52,16 +52,16 @@ class AWS(object):
 
         if self.client is None:
             # Configure the MQTT client
-            self.client = AWSIoTMQTTClient(awsconfig.AWS_IOT_CLIENT_ID)
-            self.client.configureEndpoint(awsconfig.AWS_IOT_HOST, awsconfig.AWS_IOT_PORT)
-            self.client.configureCredentials(awsconfig.AWS_IOT_ROOT_CA,
-                                             awsconfig.AWS_IOT_PRIVATE_KEY,
-                                             awsconfig.AWS_IOT_CLIENT_CERT)
+            self.client = AWSIoTMQTTClient(config.AWS_IOT_CLIENT_ID)
+            self.client.configureEndpoint(config.AWS_IOT_HOST, config.AWS_IOT_PORT)
+            self.client.configureCredentials(config.AWS_IOT_ROOT_CA,
+                                             config.AWS_IOT_PRIVATE_KEY,
+                                             config.AWS_IOT_CLIENT_CERT)
 
-            self.client.configureOfflinePublishQueueing(awsconfig.AWS_IOT_OFFLINE_QUEUE_SIZE)
-            self.client.configureDrainingFrequency(awsconfig.AWS_IOT_DRAINING_FREQ)
-            self.client.configureConnectDisconnectTimeout(awsconfig.AWS_IOT_CONN_DISCONN_TIMEOUT)
-            self.client.configureMQTTOperationTimeout(awsconfig.AWS_IOT_MQTT_OPER_TIMEOUT)
+            self.client.configureOfflinePublishQueueing(config.AWS_IOT_OFFLINE_QUEUE_SIZE)
+            self.client.configureDrainingFrequency(config.AWS_IOT_DRAINING_FREQ)
+            self.client.configureConnectDisconnectTimeout(config.AWS_IOT_CONN_DISCONN_TIMEOUT)
+            self.client.configureMQTTOperationTimeout(config.AWS_IOT_MQTT_OPER_TIMEOUT)
 
         # Connect to MQTT Host
         if self.client.connect():
@@ -75,7 +75,7 @@ class AWS(object):
         Publish message
         """
         log.info('Publish [{}]', json.dumps(msg))
-        self.client.publish(awsconfig.AWS_IOT_TOPIC, json.dumps(msg), 1)
+        self.client.publish(config.AWS_IOT_TOPIC, json.dumps(msg), 1)
 
     def disconnect(self):
         """
