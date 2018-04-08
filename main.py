@@ -59,14 +59,14 @@ def start_network():
     log.debug('Start networking ...')
     global lora
     if config.LORA_ENABLED:
-        log.info('Start LoRa network')
+        log.info('Start LoRa network')        
         if not lora:
             if config.LORA_ACTIVATION == LoRa.OTAA:
-                log.info('Start LoRa OTAA')
+                log.debug('Start LoRa OTAA')
                 lora = LORAWAN(app_eui=config.LORA_APP_EUI, app_key= config.LORA_APP_KEY)
 
             if config.LORA_ACTIVATION == LoRa.ABP:
-                log.info('Start LoRa ABP')
+                log.debug('Start LoRa ABP')
                 lora = LORAWAN(activation=LoRa.ABP, dev_addr=config.LORA_DEV_ADDR, 
                                nwk_swkey=config.LORA_NWK_SWKEY, app_swkey=config.LORA_APP_SWKEY)
 
@@ -152,14 +152,18 @@ try:
         py.setup_int_wake_up(True, True)
 
         acc = LIS2HH12()
-        
+                
         # enable the activity/inactivity interrupts
         # set the accelereation threshold to 2000mG (2G) and the min duration to 200ms
-        acc.enable_activity_interrupt(2000, 200)
+        acc.enable_activity_interrupt(config.ACCELEROMETER_THRESHOLD, 
+                                      config.ACCLEROMETER_DURATION_MS)
 
     # Go to sleep
     if config.DEEPSLEEP_ENABLED:
-        log.info('Start sleeping for {}', config.DEEPSLEEP_IN_SECONDS)
+        log.info('Start sleeping for {} seconds', config.DEEPSLEEP_IN_SECONDS)
+        time.sleep(2) # So everything can finish
+
+        # Sleep
         py.setup_sleep(config.DEEPSLEEP_IN_SECONDS)
         py.go_to_sleep()    
 

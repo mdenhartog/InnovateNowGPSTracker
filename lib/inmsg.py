@@ -100,9 +100,9 @@ class GPSMessage(Message):
 
         lat = str(self.latitude)
         lon = str(self.longitude)
-        speed = str(self.speed)
+        speed = round(self.speed)
 
-        return lat + '|' + lon + '|' + speed
+        return lat + '|' + lon + '|{0:.0f}'.format(speed)
 
 
 class EnvironMessage(Message):

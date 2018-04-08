@@ -24,6 +24,7 @@
 import socket
 import time
 import binascii
+import pycom
 
 from network import LoRa
 
@@ -64,6 +65,7 @@ class LORAWAN(object):
         self.__activation = activation
         self.__lora = None
         self.__socket = None
+        self.__mode = mode
          
         self.__lora = LoRa(mode=mode,
                             region=region,
@@ -80,27 +82,39 @@ class LORAWAN(object):
         Start the LORAWAN connection
         """
 
-        try:                            
-            # Join network using OTAA
-            if self.__activation == LoRa.OTAA:
+        try:    
+            
+            if not pycom.nvs_get('LoRaConnection'):                        
                 
-                log.debug('Join network using OTAA')
-                self.__lora.join(activation=LoRa.OTAA,
-                                auth=(self.__app_eui, self.__app_key),
-                                timeout=self.__join_timeout)
-
-                while not self.__lora.has_joined():
-                    log.debug('Not yet joined...')
-                    time.sleep(2.5)
+                # Join network using OTAA
+                if self.__activation == LoRa.OTAA:
                     
-            # Join network using ABP
-            if self.__activation == LoRa.ABP:
+                    log.debug('Join network using OTAA')
+                    self.__lora.join(activation=LoRa.OTAA,
+                                    auth=(self.__app_eui, self.__app_key),
+                                    timeout=self.__join_timeout)
 
-                log.debug('Join network using ABP')
-                self.__lora.join(activation=LoRa.ABP,
-                                auth=(self.__dev_addr, self.__nwk_swkey, self.__nwk_appkey),
-                                timeout=self.__join_timeout)
-                               
+                    while not self.__lora.has_joined():
+                        log.debug('Not yet joined...')
+                        time.sleep(2.5)
+                        
+                # Join network using ABP
+                if self.__activation == LoRa.ABP:
+
+                    log.debug('Join network using ABP')
+                    self.__lora.join(activation=LoRa.ABP,
+                                    auth=(self.__dev_addr, self.__nwk_swkey, self.__nwk_appkey),
+                                    timeout=self.__join_timeout)
+
+                # Write LoRa Connection is true to NVS memory
+                # TODO: More testing with this... currently not working
+                # pycom.nvs_set('LoRaConnection', 1)           
+            else:
+                log.info('Restoring LoRa connection')
+                self.__lora = LoRa(mode=self.__mode)
+                self.restore_state()
+                time.sleep(2)
+
         except Exception as e:
             log.error('Exception {} accesssing or joining LoRa network',e)
 
@@ -123,6 +137,8 @@ class LORAWAN(object):
 
             except OSError as e:
                 log.error('OSError {}',e)
+                self.erase_state()
+                pycom.nvs_erase('LoRaConnection')           
 
             # make the socket non-blocking
             # (because if there's no data received it will block forever...)
@@ -148,15 +164,15 @@ class LORAWAN(object):
     def restore_state(self):
         'Retrieve state so you do not have to rejoin'
         
-        log.debug('Restore state from NVRAM')
         if self.__lora:
+            log.debug('Restore state from NVRAM')
             self.__lora.nvram_restore()
 
     def erase_state(self):
         'Erase state'
-
-        log.debug('Erase state from NVRAM')
+        
         if self.__lora:
+            log.debug('Erase state from NVRAM')
             self.__lora.nvram_restore()
 
     def stop(self):
