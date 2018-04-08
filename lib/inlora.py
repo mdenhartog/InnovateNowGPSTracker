@@ -16,7 +16,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 #
-# pylint: disable=
+# pylint: disable=E0401,E1101
 # 
 
 """" Class for sending messages via LoRaWAN OTAA or ABP """
@@ -26,7 +26,6 @@ import time
 import binascii
 
 from network import LoRa
-import lora_config as config
 
 # Initialize logging
 import inlogging as logging
@@ -38,29 +37,30 @@ class LORAWAN(object):
     """
     def __init__(self, mode=LoRa.LORAWAN, activation=LoRa.OTAA, 
                  region=LoRa.EU868, data_rate=5, join_timeout=0, tx_retries=3, adr=True, 
-                 public=True, device_class=LoRa.CLASS_A):
+                 public=True, device_class=LoRa.CLASS_A, app_eui=None, app_key=None,
+                 dev_addr=None, nwk_swkey=None, app_swkey=None):
 
         # OTAA authentication parameters
         if activation == LoRa.OTAA:
-            if config.LORA_APP_EUI:
-                self.__app_eui = binascii.unhexlify(config.LORA_APP_EUI.replace(' ', ''))
+            if app_eui:
+                self.__app_eui = binascii.unhexlify(app_eui.replace(' ', ''))
 
-            if config.LORA_APP_KEY:
-                self.__app_key = binascii.unhexlify(config.LORA_APP_KEY.replace(' ', ''))
+            if app_key:
+                self.__app_key = binascii.unhexlify(app_key.replace(' ', ''))
         
         # ABP authentication parameters
         if activation == LoRa.ABP:
-            if config.LORA_DEV_ADDR:
-                self.__dev_addr = binascii.unhexlify(config.LORA_DEV_ADDR.replace(' ', ''))
+            if dev_addr:
+                self.__dev_addr = binascii.unhexlify(dev_addr.replace(' ', ''))
             
-            if config.LORA_NWK_SWKEY:
-                self.__nwk_swkey = binascii.unhexlify(config.LORA_NWK_SWKEY.replace(' ', ''))
+            if nwk_swkey:
+                self.__nwk_swkey = binascii.unhexlify(nwk_swkey.replace(' ', ''))
 
-            if config.LORA_APP_SWKEY:
-                self.__nwk_appkey = binascii.unhexlify(config.LORA_APP_SWKEY.replace(' ', ''))
+            if app_swkey:
+                self.__nwk_appkey = binascii.unhexlify(app_swkey.replace(' ', ''))
 
         self.__join_timeout = join_timeout * 1000
-        self.__data_rate = date_rate
+        self.__data_rate = data_rate
         self.__activation = activation
         self.__lora = None
         self.__socket = None
@@ -89,7 +89,7 @@ class LORAWAN(object):
                                 auth=(self.__app_eui, self.__app_key),
                                 timeout=self.__join_timeout)
 
-                while not self.lora.has_joined():
+                while not self.__lora.has_joined():
                     log.debug('Not yet joined...')
                     time.sleep(2.5)
                     
@@ -116,9 +116,10 @@ class LORAWAN(object):
             # (waits for the data to be sent and for the 2 receive windows to expire)
             self.__socket.setblocking(True)
 
-            if message:
-                log.debug('Send: ', message)
-                self.__socket.send(message)
+            try:
+                if message:
+                    log.debug('Send: ', message)
+                    self.__socket.send(message)
 
             except OSError as e:
                 log.error('OSError {}',e)

@@ -15,9 +15,9 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
-
-# Linter
+#
 # pylint: disable=E0401,E1101,W0703,C0411,C0103,E1205
+#
 
 """
 InnovateNow Outdoor Tracker program
@@ -30,20 +30,16 @@ import gc
 import sys
 import time
 
-from version import VERSION
-from innetwork import WLANNetwork, NTP
-from inaws import AWS
-from inble import BLEScanner
-from inmsg import AliveMessage, GPSMessage, EnvironMessage, AWSMessage
-from ingps import GPS
-from inenvsensor import Environment
-from intimer import ResetTimer
-from haversine import Haversine
+from network import LoRa
+from pytrack import Pytrack
+from pycoproc import WAKE_REASON_ACCELEROMETER
 
-# Latitude / Longitude 
-cur_lat = None
-cur_lon = None
-location_counter = 0
+from version import VERSION
+from inmsg import GPSMessage, EnvironMessage
+from ingps import GPS
+from inlora import LORAWAN
+from inenvsensor import Environment
+from LIS2HH12 import LIS2HH12
 
 # Initialize logging
 import inlogging as logging
@@ -54,182 +50,122 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-# Led orange
+lora = None
+
+def start_network():
+    """ Start network logic """
+    # TODO: SigFox, WLAN and BLE
+    
+    log.debug('Start networking ...')
+    global lora
+    if config.LORA_ENABLED:
+        log.info('Start LoRa network')
+        if not lora:
+            if config.LORA_ACTIVATION == LoRa.OTAA:
+                log.info('Start LoRa OTAA')
+                lora = LORAWAN(app_eui=config.LORA_APP_EUI, app_key= config.LORA_APP_KEY)
+
+            if config.LORA_ACTIVATION == LoRa.ABP:
+                log.info('Start LoRa ABP')
+                lora = LORAWAN(activation=LoRa.ABP, dev_addr=config.LORA_DEV_ADDR, 
+                               nwk_swkey=config.LORA_NWK_SWKEY, app_swkey=config.LORA_APP_SWKEY)
+
+            lora.start() # Start joining LoRa Network                   
+
+# Stop default heartbeat
 pycom.heartbeat(False)
+
+# Led orange
 pycom.rgbled(config.LED_COLOR_WARNING)
 
-log.info('Start InnovateNow Beacon Scanner version {}', VERSION)
+log.info('Start InnovateNow Outdoor Tracker version {}', VERSION)
 log.debug('Memory allocated: ' + str(gc.mem_alloc()) + ' ,free: ' + str(gc.mem_free()))
 
 # Set watchdog 5min
 wdt = machine.WDT(timeout=300000)
 
-# Start device reset timer
-if config.DEVICE_RESET_AFTER_SECONDS:
-    reset_timer = ResetTimer(config.DEVICE_RESET_AFTER_SECONDS)
-
 try:
+    
+    # Init pytrack board
+    py = Pytrack()
+
+    wdt.feed() # Feed
 
     # Start network
-    log.info('Start WLAN network [{}]', config.WLAN_SSID)
-    network = WLANNetwork(ssid=config.WLAN_SSID, key=config.WLAN_KEY)
-    network.connect()
+    start_network()
 
     wdt.feed() # Feed
-
-    # Sync correct time with NTP
-    log.info('Sync time with NTP')
-    ntp = NTP(ntp_pool_server=config.NTP_POOL_SERVER)
-    ntp.sync()
-
-    wdt.feed() # Feed
-
-    # Connect to AWS
-    log.info('Start connection AWS IoT')
-    aws = AWS()
-    aws.connect()
-
-    wdt.feed() # Feed
-
-    # Publish alive message
-    log.info('Publish device alive message')
-    aliveMsg = AliveMessage(customer=config.CUSTOMER, device_id=config.DEVICE_ID)
-    aws.publish(aliveMsg.to_dict())
-
-    wdt.feed() # Feed
-
+        
     # Init gps
-    gps = None
-    i2c = None
-    if config.GPS_AVAILABLE and config.GPS_PORT == 'UART':
-        log.info('Initialize GPS via Serial')
-        uart = machine.UART(1, pins=(config.GPS_UART_TX_PIN, config.GPS_UART_RX_PIN), baudrate=9600)
-        gps = GPS(uart=uart)
+    gps = GPS(i2c=py.i2c)
 
-    if config.GPS_AVAILABLE and config.GPS_PORT == 'I2C':
-        log.info('Initialize GPS via I2C on bus ' +
-                 str(config.SENSOR_I2C_BUS) + ' and pins (' + config.SENSOR_I2C_SDA_PIN +
-                 ',' + config.SENSOR_I2C_SCL_PIN + ')')
-
-        if not i2c:
-            i2c = machine.I2C(config.SENSOR_I2C_BUS,
-                              machine.I2C.MASTER,
-                              pins=(config.SENSOR_I2C_SDA_PIN, config.SENSOR_I2C_SCL_PIN))
-            log.info('I2C addresses available [{}]', i2c.scan())
-        gps = GPS(i2c=i2c)
-
-    # Init environmental sensors
-    if config.ENVIRONMENT_SENSOR_AVAILABLE:
-        log.info('Initialize Environmental sensor via I2C via bus ' +
-                 str(config.SENSOR_I2C_BUS) + ' and pins (' + config.SENSOR_I2C_SDA_PIN +
-                 ',' + config.SENSOR_I2C_SCL_PIN + ')')
-
-        if not i2c:
-            i2c = machine.I2C(config.SENSOR_I2C_BUS,
-                              machine.I2C.MASTER,
-                              pins=(config.SENSOR_I2C_SDA_PIN, config.SENSOR_I2C_SCL_PIN))
-            log.info('I2C addresses available [{}]', i2c.scan())
-
-        environ = Environment(i2c=i2c)
-
-    # Init scanner
-    scanner = BLEScanner(max_list_items=50)
+    # Init environmental sensor
+    environ = Environment(i2c=py.i2c)
 
     # Led off
     pycom.heartbeat(False)
 
-    while True:
+    wdt.feed() # Feed
 
-        log.debug('Memory allocated: ' + str(gc.mem_alloc()) + ' ,free: ' + str(gc.mem_free()))
+    # Read GPS coordinates
+    # Retry counter is used to stop when there is no GPS signal available
+    retry_counter = 0
+    while not gps.coords_valid and retry_counter < 5:
+        gps.update()
+        retry_counter += 1
+        time.sleep_ms(500)
 
-        wdt.feed() # Feed
+    wdt.feed() # Feed
+    
+    gps_msg = GPSMessage(latitude=gps.latitude[0],
+                         longitude=gps.longitude[0],
+                         altitude=gps.altitude,
+                         speed=gps.speed(),
+                         course=gps.course,
+                         direction=gps.direction)
 
-        # Start Beacon scanning for 2min
-        scanner.start(timeout=config.SCAN_TIME_IN_SECONDS)
-        scanner.stop()
+    env_msg = EnvironMessage()
+    if config.ENVIRONMENT_SENSOR_AVAILABLE:
+        env_msg = EnvironMessage(temperature=environ.temperature,
+                                 humidity=environ.humidity,
+                                 barometric_pressure=environ.barometric_pressure)
 
-        wdt.feed() # Feed
+    # Send message
+    pycom.rgbled(config.LED_COLOR_OK)
+    
+    msg = gps_msg.lora() + '|' + env_msg.lora() + '|{0:.1f}'.format(py.read_battery_voltage())
 
-        # Read GPS coordinates
-        if config.GPS_AVAILABLE:
-            gps.update()
+    # Awake from Accelerometer
+    if py.get_wake_reason() == WAKE_REASON_ACCELEROMETER:
+        msg += '|1' # Means awake from Accellerometer
+    
+    log.debug ('LoRa message to send {}', msg)
+    lora.send_str(message=msg)
+    pycom.heartbeat(False)
 
-        wdt.feed() # Feed
+    # Awake on Accelerometer
+    if config.DEEPSLEEP_AWAKE_ON_ACCELEROMETER:
+        # Disable wakeup source from INT pin
+        py.setup_int_pin_wake_up(False)
 
-        # Construct messsages
-        gps_msg = GPSMessage()
-        if config.GPS_AVAILABLE:   
+        # Enable activity and also inactivity interrupts, using the default callback handler
+        py.setup_int_wake_up(True, True)
 
-            new_lat = gps.latitude[0]
-            new_lon = gps.longitude[0]
+        acc = LIS2HH12()
+        
+        # enable the activity/inactivity interrupts
+        # set the accelereation threshold to 2000mG (2G) and the min duration to 200ms
+        acc.enable_activity_interrupt(2000, 200)
 
-            # Calc distance
-            if gps.coords_valid:
-                distance = 0                
-                if cur_lat and cur_lon:
-                    distance = Haversine([cur_lat,cur_lon], [new_lat,new_lon]).meters
-                    log.debug('Distance: ' + str(distance))
-
-                # Check distance
-                # When the distance is often to far off. Use the new coordinates
-                if distance < config.GPS_COORD_DIFF_UPDATE_RULE or location_counter > 5:  
-                    log.debug('Using the new coordinates')   
-                    location_counter = 0                   
-                    cur_lat = new_lat
-                    cur_lon = new_lon
-                else:
-                    location_counter = location_counter + 1   
-
-            gps_msg = GPSMessage(id=config.GPS_SENSOR_ID,
-                                 latitude=cur_lat,
-                                 longitude=cur_lon,
-                                 altitude=gps.altitude,
-                                 speed=gps.speed(),
-                                 course=gps.course,
-                                 direction=gps.direction)
-
-        else:
-            gps_msg = GPSMessage(latitude=config.GPS_FIXED_LATITUDE,
-                                 longitude=config.GPS_FIXED_LONGITUDE)
-
-        env_msg = EnvironMessage()
-        if config.ENVIRONMENT_SENSOR_AVAILABLE:
-            env_msg = EnvironMessage(id=config.ENVIRONMENT_SENSOR_ID,
-                                     temperature=environ.temperature,
-                                     humidity=environ.humidity,
-                                     barometric_pressure=environ.barometric_pressure)
-
-        aws_msg = AWSMessage(customer=config.CUSTOMER,
-                             device_id=config.DEVICE_ID,
-                             environ_message=env_msg.to_dict(),
-                             gps_message=gps_msg.to_dict(),
-                             beacons=scanner.beacons,
-                             tags=scanner.tags)
-
-        # Publish to AWS
-        pycom.rgbled(config.LED_COLOR_OK) # Led green
-        aws.publish(aws_msg.to_dict())
-        pycom.heartbeat(False)
-
-        wdt.feed() # Feed
-
-        # Reset everything
-        scanner.reset()
-
-        gps_msg = None
-        env_msg = None
-        aws_msg = None
-
-        # Free up space
-        if gc.mem_free() < 30000:
-            gc.collect()
+    # Go to sleep
+    if config.DEEPSLEEP_ENABLED:
+        log.info('Start sleeping for {}', config.DEEPSLEEP_IN_SECONDS)
+        py.setup_sleep(config.DEEPSLEEP_IN_SECONDS)
+        py.go_to_sleep()    
 
 except Exception as e:
     pycom.rgbled(config.LED_COLOR_ERROR)
     log.error('Unexpected error {}', e)
-
-    if aws:
-        aws.disconnect()
 
     time.sleep(5) # Wait for 5secs before reset
     machine.reset() # Reset device

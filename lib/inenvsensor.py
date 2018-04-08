@@ -17,13 +17,13 @@
 # THE SOFTWARE.
 
 # Linter
-# pylint: disable=C0103,E0401,R1710
+# pylint: disable=E0401
 
 """
 InnovateNow Environment Sensor based on:
     - BME280 sensor for Temperature, Humidity and Barometric pressure
 """
-import bme280
+import BME280 as bme280
 
 # Initialize logging
 import inlogging as logging

@@ -21,16 +21,12 @@
 """
 InnovateNow Outdoor Tracker configuration settings
 """
+
+from network import LoRa
 import inlogging as logging
 
 # Log level
 LOG_LEVEL = logging.DEBUG
-
-# Customer
-CUSTOMER = "InnovateNow"
-
-# Device identifier for IoT environment
-DEVICE_ID = "e3974fe0-18d9-11e8-9cfb-da0741d48d81"
 
 # Serial Access
 # True for development set this parameter to False for production
@@ -45,7 +41,20 @@ FTP_PASSWORD = "123IN4567890"
 # Deepsleep
 DEEPSLEEP_ENABLED = True
 DEEPSLEEP_AWAKE_ON_ACCELEROMETER = True
-DEEPSLEEP_IN_SECONDS = 300   # 5 minutes
+DEEPSLEEP_IN_SECONDS = 60   # 5 minutes for now 1 minute
+
+# LoRa settings
+LORA_ENABLED = True
+LORA_ACTIVATION = LoRa.OTAA
+
+# LoRa OTAA
+LORA_APP_EUI = '70 B3 D5 7E D0 00 B7 C1'
+LORA_APP_KEY = '28 35 9B A0 E2 25 D1 DD 38 AF E3 8A 2C AB 8D 5D'
+
+# LoRa ABP
+LORA_DEV_ADDR = None
+LORA_NWK_SWKEY = None
+LORA_APP_SWKEY = None
 
 # WLAN settings
 WLAN_ENABLED = False
@@ -53,20 +62,8 @@ WLAN_SSID = "HARTOG_GUEST" # SSID to connect to
 WLAN_KEY = "1234567890"    # SSID key
 WLAN_INT_ANTENNA = True    # True internal antenna else False
 
-# Sensor I2C ENVIRONMENT_I2C_BUS
-SENSOR_I2C_BUS = 0
-SENSOR_I2C_SDA_PIN = 'P22'
-SENSOR_I2C_SCL_PIN = 'P21'
-
 # Environmental sensor is the BME280 sensor (temp, humidity and barometric pressure)
 ENVIRONMENT_SENSOR_AVAILABLE = True
-ENVIRONMENT_SENSOR_ID = '4c871008-18da-11e8-a5ea-96c32e02788c'
-
-# GPS 
-GPS_SENSOR_ID = '837ae7a6-18da-11e8-a5ea-96c32e02788c'
-GPS_PORT = 'I2C'   # I2C or UART (Specifiy the TX,RX pin)
-GPS_UART_TX_PIN = 'P3'
-GPS_UART_RX_PIN = 'P4'
 
 # NTP for setting the correct time
 NTP_POOL_SERVER = "nl.pool.ntp.org"
