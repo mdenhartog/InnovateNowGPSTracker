@@ -145,6 +145,7 @@ try:
 
     # Awake on Accelerometer
     if config.DEEPSLEEP_AWAKE_ON_ACCELEROMETER:
+        
         # Disable wakeup source from INT pin
         py.setup_int_pin_wake_up(False)
 

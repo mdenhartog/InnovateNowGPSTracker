@@ -74,6 +74,10 @@ class LORAWAN(object):
                             tx_retries=tx_retries,
                             device_class=device_class)
         
+        # Restore
+        self.__lora.nvram_restore()
+        time.sleep(1)
+
         log.debug('Device EUI: {}',binascii.hexlify(self.__lora.mac()).upper().decode('utf-8'))
         log.debug('Frequency: {}', self.__lora.frequency())
 
@@ -83,8 +87,9 @@ class LORAWAN(object):
         """
 
         try:    
-            
-            if not pycom.nvs_get('LoRaConnection'):                        
+           
+            # When device isn't joined
+            if not self.__lora.has_joined():                        
                 
                 # Join network using OTAA
                 if self.__activation == LoRa.OTAA:
@@ -95,7 +100,7 @@ class LORAWAN(object):
                                     timeout=self.__join_timeout)
 
                     while not self.__lora.has_joined():
-                        log.debug('Not yet joined...')
+                        log.debug('Wait for joining LoRa network...')
                         time.sleep(2.5)
                         
                 # Join network using ABP
@@ -105,15 +110,6 @@ class LORAWAN(object):
                     self.__lora.join(activation=LoRa.ABP,
                                     auth=(self.__dev_addr, self.__nwk_swkey, self.__nwk_appkey),
                                     timeout=self.__join_timeout)
-
-                # Write LoRa Connection is true to NVS memory
-                # TODO: More testing with this... currently not working
-                # pycom.nvs_set('LoRaConnection', 1)           
-            else:
-                log.info('Restoring LoRa connection')
-                self.__lora = LoRa(mode=self.__mode)
-                self.restore_state()
-                time.sleep(2)
 
         except Exception as e:
             log.error('Exception {} accesssing or joining LoRa network',e)
@@ -134,12 +130,14 @@ class LORAWAN(object):
                 if message:
                     log.debug('Send: ', message)
                     self.__socket.send(message)
+                    self.__lora.nvram_save()
+                    time.sleep(1)
 
             except OSError as e:
                 log.error('OSError {}',e)
-                self.erase_state()
-                pycom.nvs_erase('LoRaConnection')           
-
+                self.__lora.nvram_erase()
+                time.sleep(1)
+                
             # make the socket non-blocking
             # (because if there's no data received it will block forever...)
             self.__socket.setblocking(False)
@@ -153,28 +151,7 @@ class LORAWAN(object):
             data = self.__socket.recv(64)
 
         return data
-
-    def save_state(self):
-        'Save state so you do not have to rejoin after coming out of deepsleep'
-        
-        log.debug('Save state to NVRAM')
-        if self.__lora:
-            self.__lora.nvram_save()
     
-    def restore_state(self):
-        'Retrieve state so you do not have to rejoin'
-        
-        if self.__lora:
-            log.debug('Restore state from NVRAM')
-            self.__lora.nvram_restore()
-
-    def erase_state(self):
-        'Erase state'
-        
-        if self.__lora:
-            log.debug('Erase state from NVRAM')
-            self.__lora.nvram_restore()
-
     def stop(self):
         ' Stop the LORAWAN connection'
 
