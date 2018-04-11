@@ -113,7 +113,7 @@ try:
     while not gps.coords_valid and retry_counter < 5:
         gps.update()
         retry_counter += 1
-        time.sleep_ms(500)
+        time.sleep(15)  # Give the GPS time to get a fix
 
     wdt.feed() # Feed
     
