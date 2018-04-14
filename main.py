@@ -109,11 +109,12 @@ try:
 
     # Read GPS coordinates
     # Retry counter is used to stop when there is no GPS signal available
+    time.sleep(15) # Give GPS time to find a fix
     retry_counter = 0
     while not gps.coords_valid and retry_counter < 5:
         gps.update()
         retry_counter += 1
-        time.sleep(15)  # Give the GPS time to get a fix
+        time.sleep(5)  # Give the GPS time to get a fix
 
     wdt.feed() # Feed
     
