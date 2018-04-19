@@ -43,14 +43,19 @@ class Environment(object):
         if self.i2c:
             self.addresses = self.i2c.scan()
 
-            # log.info('I2C addresses [{}]', self.addresses)
-            log.info('BME280 [{}]', bme280.BME280_I2CADDR)
-
+            log.info('I2C addresses [{}]', self.addresses)
+            
             self.bme280 = None
-            if bme280.BME280_I2CADDR in self.addresses:
-                log.info('Initialize Temperature, Humidity and Barometric sensor')
-                self.bme280 = bme280.BME280(address=bme280.BME280_I2CADDR,
-                                            i2c=i2c) # default address 0x76
+            if bme280.BME280_I2CADDR1 in self.addresses:
+                log.info('Initialize Temperature, Humidity and Barometric sensor on {}', bme280.BME280_I2CADDR1)
+                self.bme280 = bme280.BME280(address=bme280.BME280_I2CADDR1,
+                                            i2c=i2c) # default address 0x76s
+
+            if bme280.BME280_IC2ADDR2 in self.addresses:
+                log.info('Initialize Temperature, Humidity and Barometric sensor on {}', bme280.BME280_IC2ADDR2)
+                self.bme280 = bme280.BME280(address=bme280.BME280_IC2ADDR2,
+                                            i2c=i2c) # default address 0x77
+
 
     @property
     def temperature(self):

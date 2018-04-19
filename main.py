@@ -118,6 +118,7 @@ try:
 
     wdt.feed() # Feed
     
+    log.debug('Prepare GPS messsage')
     gps_msg = GPSMessage(latitude=gps.latitude[0],
                          longitude=gps.longitude[0],
                          altitude=gps.altitude,
@@ -125,17 +126,21 @@ try:
                          course=gps.course,
                          direction=gps.direction)
 
+    log.debug('Prepare Environmental messsage')
     env_msg = EnvironMessage()
     if config.ENVIRONMENT_SENSOR_AVAILABLE:
-        env_msg = EnvironMessage(temperature=environ.temperature,
-                                 humidity=environ.humidity,
-                                 barometric_pressure=environ.barometric_pressure)
+        if environ.temperature and environ.humidity and environ.barometric_pressure:
+            env_msg = EnvironMessage(temperature=environ.temperature,
+                                    humidity=environ.humidity,
+                                    barometric_pressure=environ.barometric_pressure)
+        else:
+            log.error('Problem with environmental sensor')                            
 
     # Send message
     pycom.rgbled(config.LED_COLOR_OK)
-    
-    msg = gps_msg.lora() + '|' + env_msg.lora() + '|{0:.1f}'.format(py.read_battery_voltage())
 
+    msg = gps_msg.lora() + '|' + env_msg.lora() + '|{0:.1f}'.format(py.read_battery_voltage())
+    
     # Awake from Accelerometer
     if py.get_wake_reason() == WAKE_REASON_ACCELEROMETER:
         msg += '|1' # Means awake from Accellerometer

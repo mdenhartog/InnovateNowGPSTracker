@@ -97,10 +97,13 @@ class GPSMessage(Message):
 
     def lora(self):
         """ Transform to LoRa GPS message """
-
+        
         lat = str(self.latitude)
         lon = str(self.longitude)
-        speed = round(self.speed)
+        if self.speed:
+            speed = round(self.speed)
+        else:
+            speed = 0    
 
         return lat + '|' + lon + '|{0:.0f}'.format(speed)
 
@@ -142,9 +145,18 @@ class EnvironMessage(Message):
     def lora(self):
         """ Transform to LoRa GPS message """
 
-        temperature = round(self.temperature, 2)
-        humidity = round(self.humidity, 0)
-        pressure = round(self.barometric_pressure, 0)
+        temperature = -80
+        humidity = -1
+        pressure = -1
+        
+        if self.temperature:
+            temperature = round(self.temperature, 2)
+
+        if self.humidity:
+            humidity = round(self.humidity, 0)
+
+        if self.barometric_pressure:    
+            pressure = round(self.barometric_pressure, 0)
 
         return '{0:.2f}'.format(temperature) + '|{0:.0f}'.format(humidity) + '|{0:.0f}'.format(pressure) 
     

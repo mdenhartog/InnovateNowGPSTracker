@@ -30,7 +30,8 @@ from array import array
 from ustruct import unpack, unpack_from
 
 # BME280 default address.
-BME280_I2CADDR = 0x76
+BME280_I2CADDR1 = 0x76
+BME280_IC2ADDR2 = 0X77
 
 # Operating Modes
 BME280_OSAMPLE_1 = 1
@@ -47,7 +48,7 @@ class BME280(object):
 
     def __init__(self,
                  mode=BME280_OSAMPLE_1,
-                 address=BME280_I2CADDR,
+                 address=BME280_I2CADDR1,
                  i2c=None,
                  **kwargs):
         # Check that mode is valid.
